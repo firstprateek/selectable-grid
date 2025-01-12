@@ -1,0 +1,160 @@
+<html>
+    <head>
+        <style>
+            body {
+                display: grid;
+                place-items: center;
+            }
+
+            .grid {
+                display: inline-grid;
+                grid-template-rows: repeat(10, 1fr);
+                grid-template-columns: repeat(10, 1fr);
+                border: 0.5px solid black;
+            }
+
+            .cell {
+                width: 20px;
+                height: 20px;
+                border: 0.5px solid black;
+
+                &.selected {
+                    background-color: aqua;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="grid"></div>
+        <script>
+            const grid = [...Array(10)].map(() => Array(10));
+            const $grid = document.querySelector('.grid');
+            let row = -1;
+            for (let i = 0; i < 100; i++) {
+                if (i % 10 === 0) {
+                    row++;
+                }
+                const $cell = document.createElement('span');
+                $cell.classList.add('cell');
+                $grid.appendChild($cell);
+                grid[row][i%10] = $cell;
+            }
+            const gridDimensions = $grid.getBoundingClientRect();
+            const colCoordinates = [];
+
+            let cur_x = gridDimensions.x;
+            for (let i = 0; i < 10; i++) {
+                colCoordinates.push(cur_x);
+                cur_x += 21;
+            }
+
+            const rowCoordinates = [];
+            let cur_y = gridDimensions.y;
+            for (let i = 0; i < 10; i++) {
+                rowCoordinates.push(cur_y);
+                cur_y += 21;
+            }
+
+            let startX = 0, startY = 0; running = false;
+            window.addEventListener('mousedown', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+
+                startX = event.clientX;
+                startY = event.clientY;
+                running = true;
+
+                for (let row = 0; row < 10; row++) {
+                    for (let col = 0; col < 10; col++) {
+                        grid[row][col].classList.remove('selected');
+                    }
+                }
+            });
+
+            window.addEventListener('mousemove', (event) => {
+                if (!event.buttons === 1 || !running) {
+                    return;
+                }
+
+                const curX = event.clientX;
+                const curY = event.clientY;
+
+                if (
+                    startX && curX >= cur_x ||
+                    startX && curX <= colCoordinates[0]
+                ) {
+                    return;
+                }
+
+                if (
+                    startY && curY >= cur_y ||
+                    startY && curY <= rowCoordinates[0]
+                ) {
+                    return;
+                }
+
+                // Assume going bottom right
+
+                const rowStartIdx = binarySearchNext(startY, rowCoordinates);
+                const rowEndIdx = binarySearchPrev(curY, rowCoordinates);
+                
+                const colStartIdx = binarySearchNext(startX, colCoordinates);
+                const colEndIdx = binarySearchPrev(curX, colCoordinates);
+
+                // Check exit condition
+                if (
+                    rowStartIdx >= rowCoordinates.length ||
+                    rowEndIdx < 0 ||
+                    colStartIdx >= colCoordinates.length ||
+                    colEndIdx < 0
+                ) {
+                    return;
+                }
+
+                // Reset before setting
+                for (let row = 0; row < 10; row++) {
+                    for (let col = 0; col < 10; col++) {
+                        grid[row][col].classList.remove('selected');
+                    }
+                }
+
+                // Otherwise
+                for (let i = rowStartIdx; i <= rowEndIdx; i++) {
+                    for (let j = colStartIdx; j <= colEndIdx; j++) {
+                        grid[i][j].classList.add('selected');
+                    }
+                }
+            });
+
+            window.addEventListener('mouseup', (event) => {
+                running = false;
+            });
+
+            const binarySearchNext = (val, arr) => {
+                let left = 0, right = arr.length - 1;
+                while (left <= right) {
+                    const mid = Math.floor((left + right) / 2);
+                    if (arr[mid] < val) {
+                        left = mid + 1;
+                    } else {
+                        right = mid - 1;
+                    }
+                }
+                return left;
+            }
+
+            const binarySearchPrev = (val, arr) => {
+                let left = 0, right = arr.length - 1;
+                while (left <= right) {
+                    const mid = Math.floor((left + right) / 2);
+                    if (arr[mid] > val) {
+                        right = mid - 1;
+                    } else {
+                        left = mid + 1;
+                    }
+                }
+                return right;
+            }
+        </script>
+    </body>
+</html>
